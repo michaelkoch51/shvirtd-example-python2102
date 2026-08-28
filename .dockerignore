@@ -1,0 +1,12 @@
+.git
+.gitignore
+*.md
+Dockerfile*
+.dockerignore
+.env
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+terraform-image.tar
+terraform-bin
