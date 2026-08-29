@@ -1,4 +1,8 @@
+Задача 3
 
+![](https://github.com/user-attachments/assets/57badcc7-a9a0-4397-84f7-81041902589a)
+
+Задача 4
 
 ### Код конфигурации инфраструктуры (main.tf)
 
@@ -121,3 +125,11 @@ echo "Резервная копия $BACKUP_NAME успешно создана"
 
 **3. Безопасность (защита от утечки паролей в Git):**
 Переменные авторизации вынесены в скрытый локальный файл конфигурации `.backup.env`, который добавлен в правила `.gitignore`. В публичный репозиторий GitHub конфиг с паролями не попадает.
+
+![](https://github.com/user-attachments/assets/e51caeb2-61aa-47eb-b7d8-1e4172af52b9)
+
+Задача 6
+
+![](https://github.com/user-attachments/assets/b3479008-c2f5-4ba8-be04-6eb3821b1f24)
+![](https://github.com/user-attachments/assets/518cd65a-8a51-4b3a-b986-8484caf33277)
+![](https://github.com/user-attachments/assets/ef54f49f-87b2-4bee-a6ee-57f6248ce13c)
