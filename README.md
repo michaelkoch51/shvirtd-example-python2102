@@ -1,96 +1,91 @@
-# shvirtd-example-python
 
-Учебный проект FastAPI-приложения для изучения Docker Compose.
 
-## Описание проекта
+### Код конфигурации инфраструктуры (main.tf)
 
-Это простое веб-приложение на FastAPI, предназначенное для изучения контейнеризации и работы с Docker Compose. Приложение демонстрирует:
+```hcl
+terraform {
+  required_providers {
+    yandex = {
+      source = "yandex-cloud/yandex"
+    }
+  }
+  required_version = ">= 0.13"
+}
 
-- Создание веб-сервиса на FastAPI
-- Подключение к базе данных MySQL
-- Работу с прокси-серверами (Nginx → HAProxy → FastAPI)
-- Корректную настройку сетей Docker
-- Передачу IP-адресов через заголовки прокси
+provider "yandex" {
+  zone = "ru-central1-a"
+}
 
-### Функциональность
+data "yandex_compute_image" "ubuntu" {
+  family = "ubuntu-2204-lts"
+}
 
-При обращении к главной странице приложение:
-1. Определяет IP-адрес клиента
-2. Записывает время запроса и IP-адрес в базу данных MySQL
-3. Возвращает эту информацию пользователю
+resource "yandex_vpc_network" "final_net" {
+  name = "final-network"
+}
 
-**Важно для обучения:** Если обращаться к приложению напрямую (минуя прокси), вы получите подсказку о неправильном выполнении задания.
+resource "yandex_vpc_security_group" "final_sg" {
+  name       = "final-security-group"
+  network_id = yandex_vpc_network.final_net.id
 
-## Способы запуска
+  ingress {
+    protocol       = "TCP"
+    description    = "Allow SSH"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    port           = 22
+  }
 
-### 1. Запуск через Docker Compose
+  ingress {
+    protocol       = "TCP"
+    description    = "Allow Nginx web traffic"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    port           = 8090
+  }
 
-**Архитектура при запуске через Docker Compose:**
+  egress {
+    protocol       = "ANY"
+    description    = "Allow all outbound traffic"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "yandex_vpc_subnet" "final_sub" {
+  name           = "final-subnet"
+  zone           = "ru-central1-a"
+  network_id     = yandex_vpc_network.final_net.id
+  v4_cidr_blocks = ["10.130.0.0/24"]
+}
+
+resource "yandex_compute_instance" "vm" {
+  name        = "netology-docker-host-final"
+  platform_id = "standard-v3"
+  zone        = "ru-central1-a"
+
+  resources {
+    cores         = 2
+    core_fraction = 20
+    memory        = 2
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = data.yandex_compute_image.ubuntu.id
+      size     = 15
+    }
+  }
+
+  network_interface {
+    subnet_id          = yandex_vpc_subnet.final_sub.id
+    nat                = true
+    security_group_ids = [yandex_vpc_security_group.final_sg.id]
+  }
+
+  metadata = {
+    ssh-keys = "ubuntu:ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC/PoTeyKGPWy5EkMYEnq/udgVK3PbixlHWlLXN7MUtb michaelkochnev@MacBook-Pro-Mihail.local"
+  }
+}
+
+output "public_ip" {
+  value = yandex_compute_instance.vm.network_interface.0.nat_ip_address
+}
 ```
-Клиент → Nginx (8090) → HAProxy (8080) → FastAPI App (5000) → MySQL
-```
-
-### 2. Локальный запуск для разработки
-
-```bash
-# Создайте виртуальное окружение
-python3 -m venv venv
-source venv/bin/activate  # в Windows: venv\Scripts\activate
-
-# Установите зависимости
-pip install -r requirements.txt
-
-# Настройте переменные окружения для подключения к БД(не забудьте отдельно запустить БД)
-export DB_HOST='127.0.0.1'
-export DB_USER='app'  
-export DB_PASSWORD='very_strong'
-export DB_NAME='example'
-
-# Запустите приложение
-uvicorn main:app --host 0.0.0.0 --port 5000 --reload
-```
-
-**Требования для локального запуска:**
-- Python 3.12+
-- Запущенный сервер MySQL
-- База данных и пользователь, настроенные согласно переменным окружения
-
-## Настройка базы данных MySQL
-
-```sql
-CREATE DATABASE example;
-CREATE USER 'app'@'localhost' IDENTIFIED BY 'very_strong';
-GRANT ALL PRIVILEGES ON example.* TO 'app'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-## Доступные эндпоинты
-
-- `GET /` - главная страница (записывает запрос в БД и возвращает время + IP)
-- `GET /requests` - просмотр всех записей из базы данных  
-- `GET /debug` - отладочная информация о заголовках запроса
-- `GET /docs` - автоматическая документация FastAPI (Swagger UI)
-
-## Переменные окружения
-
-| Переменная | Значение по умолчанию | Описание |
-|------------|----------------------|----------|
-| `DB_HOST` | `127.0.0.1` | Хост базы данных MySQL |
-| `DB_USER` | `app` | Пользователь БД |
-| `DB_PASSWORD` | `very_strong` | Пароль БД |
-| `DB_NAME` | `example` | Имя базы данных |
-
-## Проверка работы
-
-```bash
-# При правильной настройке через прокси
-curl http://localhost:8090
-
-# При прямом обращении (НЕПРАВИЛЬНО) 
-curl http://localhost:5000  
-# Получите подсказку о том, что нужно использовать порт 8090
-```
-
-## Лицензия
-
-Этот проект распространяется под лицензией MIT (подробности в файле `LICENSE`).
