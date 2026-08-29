@@ -89,3 +89,35 @@ output "public_ip" {
   value = yandex_compute_instance.vm.network_interface.0.nat_ip_address
 }
 ```
+### Задача 5 (*) — Скрипт автоматического резервного копирования бэкапов
+
+**1. Код bash-скрипта (backup.sh):**
+```bash
+#!/bin/bash
+set -e
+
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+if [ -f "$SCRIPT_DIR/.backup.env" ]; then
+    export $(cat "$SCRIPT_DIR/.backup.env" | xargs)
+else
+    echo "Ошибка: Файл .backup.env не найден!" && exit 1
+fi
+
+BACKUP_NAME="backup_$(date +%Y%m%d_%H%M%S).sql"
+
+# Использование официального образа mysql:8 для полной совместимости с caching_sha2_password
+docker run --rm \
+  --network shvirtd-example-python2102_backend \
+  mysql:8 \
+  mysqldump -h "$MYSQL_HOST" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" > "$HOME/Desktop/backup/$BACKUP_NAME"
+
+echo "Резервная копия $BACKUP_NAME успешно создана"
+```
+
+**2. Настройка Cron-task (crontab -l):**
+```text
+* * * * * /Users/michaelkochnev/shvirtd-example-python2102/backup.sh > /dev/null 2>&1
+```
+
+**3. Безопасность (защита от утечки паролей в Git):**
+Переменные авторизации вынесены в скрытый локальный файл конфигурации `.backup.env`, который добавлен в правила `.gitignore`. В публичный репозиторий GitHub конфиг с паролями не попадает.
