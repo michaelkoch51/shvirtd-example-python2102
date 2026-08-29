@@ -1,6 +1,6 @@
 Задача 3
 
-![](https://github.com/user-attachments/assets/57badcc7-a9a0-4397-84f7-81041902589a)
+![](https://github.com/user-attachments/assets/902194fa-73cc-41ed-98ee-c35a50a7e2a6)
 
 Задача 4
 
